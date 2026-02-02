@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Social Grid</title>
+    <title>P2P Social Grid v2</title>
     <style>
         :root {
             --bg: #f0f2f5;
             --surface: #ffffff;
             --primary: #2563eb;
+            --danger: #ef4444;
             --text-main: #1e293b;
             --text-muted: #64748b;
             --border: #e2e8f0;
-            --success: #10b981;
-            --warning: #f59e0b;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,21 +32,25 @@
         #auth-section { background: var(--surface); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-align: center; }
         #app-interface { display: none; }
         
-        /* Forms & Inputs */
+        /* Buttons & Inputs */
         input, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; margin-bottom: 10px; font-family: inherit; }
+        
         button { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.9; }
+        
         button.secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
-        button.secondary:hover { background: var(--bg); }
+        button.secondary:hover { background: var(--bg); color: var(--text-main); }
 
-        /* Composer */
+        button.danger { background: var(--danger); }
+        button.danger-outline { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+        button.danger-outline:hover { background: #fef2f2; }
+
+        /* Composer & Feed */
         .composer { background: var(--surface); padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .composer textarea { resize: none; height: 80px; border: none; outline: none; margin-bottom: 10px; font-size: 1.1rem; }
         .composer-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; }
 
-        /* Feed */
-        .feed { display: flex; flex-direction: column; gap: 15px; }
-        .post { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); animation: fadeIn 0.3s ease; }
+        .post { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin-bottom: 15px; animation: fadeIn 0.3s ease; }
         .post-header { display: flex; gap: 12px; margin-bottom: 12px; }
         .avatar { width: 48px; height: 48px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: white; flex-shrink: 0; }
         .user-info { display: flex; flex-direction: column; justify-content: center; }
@@ -55,12 +58,18 @@
         .post-meta { font-size: 0.85rem; color: var(--text-muted); }
         .post-content { font-size: 1.05rem; white-space: pre-wrap; word-break: break-word; }
 
-        /* Profile Editor */
-        #profile-editor { background: var(--surface); padding: 20px; border-radius: 12px; margin-bottom: 20px; display: none; border: 1px solid var(--primary); }
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: var(--surface); padding: 25px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .modal h3 { margin-bottom: 10px; }
+        .modal p { color: var(--text-muted); margin-bottom: 20px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        
+        /* Utilities */
+        .hidden { display: none !important; }
+        .w-full { width: 100%; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -77,21 +86,23 @@
     <div id="auth-section">
         <h2>Welcome to the Decentralized Web</h2>
         <p style="color: var(--text-muted); margin: 10px 0 20px;">
-            This social network has no central server. Your identity is a cryptographic key stored on your device.
+            No servers. No passwords. Your "Key" is your login.
         </p>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button onclick="Auth.createNewUser()">Create New Identity</button>
             <button class="secondary" onclick="document.getElementById('import-area').classList.toggle('hidden')">I have a Key</button>
         </div>
-        <div id="import-area" class="hidden" style="margin-top: 20px;">
-            <input type="text" id="private-key-input" placeholder="Paste your Private Key here...">
-            <button onclick="Auth.login(document.getElementById('private-key-input').value)">Load Identity</button>
+        
+        <div id="import-area" class="hidden" style="margin-top: 20px; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px;">
+            <label style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; display: block;">Paste your Private Key JSON:</label>
+            <textarea id="private-key-input" style="height: 100px; font-family: monospace; font-size: 0.8rem;"></textarea>
+            <button class="w-full" onclick="Auth.login(document.getElementById('private-key-input').value)">Load Identity</button>
         </div>
     </div>
 
     <div id="app-interface">
         
-        <div style="background: var(--surface); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="background: var(--surface); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div id="current-avatar" class="avatar">?</div>
                 <div>
@@ -99,13 +110,14 @@
                     <div style="font-size: 0.8rem; color: var(--text-muted);">This is you</div>
                 </div>
             </div>
-            <div>
-                <button class="secondary" style="font-size: 0.8rem; padding: 6px 12px;" onclick="toggleProfileEditor()">Edit Profile</button>
-                <button class="secondary" style="font-size: 0.8rem; padding: 6px 12px;" onclick="Auth.logout()">Log Out</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="secondary" style="font-size: 0.8rem;" onclick="toggleProfileEditor()">Edit Profile</button>
+                <button class="danger-outline" style="font-size: 0.8rem;" onclick="Auth.openExportModal()">Export Key</button>
+                <button class="secondary" style="font-size: 0.8rem;" onclick="Auth.logout()">Log Out</button>
             </div>
         </div>
 
-        <div id="profile-editor">
+        <div id="profile-editor" class="hidden" style="background: var(--surface); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--primary);">
             <h3>Edit Profile</h3>
             <input type="text" id="edit-name" placeholder="Display Name">
             <div style="display: flex; gap: 10px;">
@@ -115,15 +127,36 @@
         </div>
 
         <div class="composer">
-            <textarea id="post-input" placeholder="What's happening in the p2p world?"></textarea>
+            <textarea id="post-input" placeholder="What's happening? (Synced via P2P)"></textarea>
             <div class="composer-footer">
-                <span style="font-size: 0.8rem; color: var(--text-muted);">Synced via WebRTC + IndexedDB</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Data stays on your device</span>
                 <button onclick="App.createPost()">Post</button>
             </div>
         </div>
 
-        <div id="feed-container" class="feed">
+        <div id="feed-container" class="feed"></div>
+    </div>
+</div>
+
+<div id="export-modal" class="modal-overlay hidden">
+    <div class="modal">
+        <h3>⚠️ Warning: Private Key</h3>
+        <div id="export-step-1">
+            <p>You are about to reveal your private Identity Key. <strong>Anyone with this text can impersonate you.</strong></p>
+            <p>Do not share this screen with anyone. Do you wish to proceed?</p>
+            <div class="modal-actions">
+                <button class="secondary" onclick="Auth.closeExportModal()">Cancel</button>
+                <button class="danger" onclick="Auth.revealKey()">Yes, Reveal Key</button>
             </div>
+        </div>
+        <div id="export-step-2" class="hidden">
+            <p>Copy the text below and save it somewhere safe (like a password manager).</p>
+            <textarea id="export-textarea" readonly onclick="this.select()" style="height: 120px; font-family: monospace; font-size: 0.8rem; background: #f1f5f9;"></textarea>
+            <div class="modal-actions">
+                <button class="secondary" onclick="Auth.closeExportModal()">Done</button>
+                <button onclick="Auth.copyKeyToClipboard()">Copy to Clipboard</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -132,55 +165,68 @@
     import { WebrtcProvider } from 'https://esm.sh/y-webrtc@10';
     import { IndexeddbPersistence } from 'https://esm.sh/y-indexeddb@9';
 
-    // --- GLOBAL STATE ---
-    const ROOM_NAME = 'social-grid-demo-v1';
+    // --- CONFIG ---
+    const ROOM_NAME = 'social-grid-demo-v2';
+    // Updated signaling list with multiple fallbacks
+    const SIGNALING_SERVERS = [
+        'wss://y-webrtc-signaling-us.herokuapp.com',
+        'wss://y-webrtc-signaling-eu.herokuapp.com', 
+        'wss://signaling.yjs.dev'
+        // 'ws://localhost:4444' // Uncomment this line if running a local server
+    ];
+
+    // --- STATE ---
     let ydoc, provider, persistence;
     let feedArray, profilesMap;
     let currentUser = null;
 
-    // --- AUTHENTICATION SYSTEM (LOCAL KEY PAIR) ---
+    // --- AUTHENTICATION ---
     window.Auth = {
         init() {
             const stored = localStorage.getItem('p2p_identity');
             if (stored) {
-                currentUser = JSON.parse(stored);
-                this.showApp();
+                try {
+                    currentUser = JSON.parse(stored);
+                    this.showApp();
+                } catch(e) { console.error("Identity corrupted", e); }
             }
         },
 
         async createNewUser() {
-            // Generate a random ID and color
             const userId = crypto.randomUUID();
             const color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
             const user = {
                 userId: userId,
-                privateKey: crypto.randomUUID(), // In a real app, this would be a real crypto key
+                secret: crypto.randomUUID(), // Simulated private key
                 username: 'Anon_' + userId.slice(0, 4),
-                color: color
+                color: color,
+                created: Date.now()
             };
             
-            localStorage.setItem('p2p_identity', JSON.stringify(user));
-            currentUser = user;
-            
-            // Wait for DB to load then ensure profile exists
-            await this.showApp();
-            App.ensureProfileExists();
+            this.saveAndLogin(user);
         },
 
-        login(key) {
-            if(!key) return alert("Please enter a key");
-            // In this demo, the entire object is the "key" for simplicity, 
-            // but normally you'd recover from a seed phrase.
+        login(jsonString) {
             try {
-                // For this demo, we can't easily recover from just a string without a lookup server,
-                // so we assume the user is pasting the JSON object or we fail.
-                // Simulating "Recovery" is hard serverless without a seed phrase lib.
-                alert("In this demo, 'Login' requires the browser storage. To reset, clear LocalStorage.");
-            } catch(e) { console.error(e); }
+                if(!jsonString) throw new Error("Empty key");
+                const user = JSON.parse(jsonString);
+                if(!user.userId || !user.username) throw new Error("Invalid key format");
+                
+                this.saveAndLogin(user);
+            } catch(e) { 
+                alert("Invalid Key JSON. Please ensure you copied the entire object."); 
+            }
+        },
+
+        saveAndLogin(user) {
+            localStorage.setItem('p2p_identity', JSON.stringify(user));
+            currentUser = user;
+            this.showApp();
+            App.ensureProfileExists(); // Broadcast my existence to the swarm
         },
 
         logout() {
-            if(confirm("Are you sure? You will lose access unless you saved your key.")) {
+            if(confirm("Have you exported your key? If you logout without it, you lose this account forever.")) {
                 localStorage.removeItem('p2p_identity');
                 location.reload();
             }
@@ -193,36 +239,60 @@
             // Update UI
             document.getElementById('current-username').innerText = currentUser.username;
             document.getElementById('current-avatar').style.backgroundColor = currentUser.color;
-            document.getElementById('current-avatar').innerText = currentUser.username[0];
+            document.getElementById('current-avatar').innerText = currentUser.username[0].toUpperCase();
 
-            // Initialize the P2P Engine
             await App.initYjs();
+        },
+
+        // Export Logic
+        openExportModal() {
+            document.getElementById('export-modal').classList.remove('hidden');
+            document.getElementById('export-step-1').classList.remove('hidden');
+            document.getElementById('export-step-2').classList.add('hidden');
+        },
+        closeExportModal() {
+            document.getElementById('export-modal').classList.add('hidden');
+        },
+        revealKey() {
+            document.getElementById('export-step-1').classList.add('hidden');
+            document.getElementById('export-step-2').classList.remove('hidden');
+            const jsonKey = localStorage.getItem('p2p_identity');
+            document.getElementById('export-textarea').value = jsonKey;
+        },
+        copyKeyToClipboard() {
+            const copyText = document.getElementById("export-textarea");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); 
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                alert("Copied to clipboard!");
+            });
         }
     };
 
-    // --- APPLICATION LOGIC ---
+    // --- APP LOGIC ---
     window.App = {
         async initYjs() {
+            if (ydoc) return; // Prevent double init
             ydoc = new Y.Doc();
 
-            // 1. Persistence (Load from IndexedDB)
+            // 1. Persistence (IndexedDB)
             persistence = new IndexeddbPersistence(ROOM_NAME, ydoc);
             
-            // 2. Network (Connect to Peers)
-            // Using public signaling servers for demo purposes
+            // 2. Network (WebRTC)
             provider = new WebrtcProvider(ROOM_NAME, ydoc, {
-                signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.herokuapp.com']
+                signaling: SIGNALING_SERVERS,
+                password: null // Optional: add a room password here
             });
 
             // 3. Data Structures
-            feedArray = ydoc.getArray('feed');     // Stores posts
-            profilesMap = ydoc.getMap('profiles'); // Stores user profiles (ID -> {name, color})
+            feedArray = ydoc.getArray('feed');     
+            profilesMap = ydoc.getMap('profiles'); 
 
-            // 4. Observers (React to changes)
+            // 4. Observers
             feedArray.observe(() => this.renderFeed());
-            profilesMap.observe(() => this.renderFeed()); // Re-render if profiles change
+            profilesMap.observe(() => this.renderFeed()); // Re-render names if they change
 
-            // 5. Connection Status
+            // 5. Status UI
             provider.on('status', event => {
                 const badge = document.getElementById('connection-status');
                 if (event.connected) {
@@ -230,13 +300,12 @@
                     badge.querySelector('span').innerText = 'Online (P2P)';
                 } else {
                     badge.classList.remove('online');
-                    badge.querySelector('span').innerText = 'Offline';
+                    badge.querySelector('span').innerText = 'Offline (Local)';
                 }
             });
 
-            // Wait for data to load from disk
+            // Wait for disk load
             persistence.on('synced', () => {
-                console.log('Loaded from disk');
                 this.renderFeed();
                 this.ensureProfileExists();
             });
@@ -244,32 +313,27 @@
 
         ensureProfileExists() {
             if (!currentUser || !profilesMap) return;
-            // If my profile isn't in the global map, add it
-            const myProfile = profilesMap.get(currentUser.userId);
-            if (!myProfile) {
-                profilesMap.set(currentUser.userId, {
-                    username: currentUser.username,
-                    color: currentUser.color
-                });
-            }
+            // Always overwrite my profile in the map to ensure my latest name/color is there
+            profilesMap.set(currentUser.userId, {
+                username: currentUser.username,
+                color: currentUser.color
+            });
         },
 
         updateProfile() {
             const newName = document.getElementById('edit-name').value;
             if (newName && currentUser) {
-                // Update local session
                 currentUser.username = newName;
                 localStorage.setItem('p2p_identity', JSON.stringify(currentUser));
                 
-                // Update Global DB (Propagates to everyone)
+                // Broadcast update
                 profilesMap.set(currentUser.userId, {
                     username: newName,
                     color: currentUser.color
                 });
 
-                // Update UI
                 document.getElementById('current-username').innerText = newName;
-                document.getElementById('current-avatar').innerText = newName[0];
+                document.getElementById('current-avatar').innerText = newName[0].toUpperCase();
                 toggleProfileEditor();
             }
         },
@@ -286,9 +350,7 @@
                 timestamp: Date.now()
             };
 
-            // Add to start of feed (Y.js array)
             feedArray.insert(0, [post]);
-            
             input.value = '';
         },
 
@@ -296,20 +358,19 @@
             const container = document.getElementById('feed-container');
             container.innerHTML = '';
             
-            // Get all posts
             const posts = feedArray.toArray();
             
-            // Render
             posts.forEach(post => {
-                // Look up author details in the distributed map
-                const authorProfile = profilesMap.get(post.authorId) || { username: 'Unknown', color: '#ccc' };
+                // Get author info from the map, fallback to unknown if not found yet
+                const authorProfile = profilesMap.get(post.authorId) || { username: 'Unknown User', color: '#ccc' };
                 const dateStr = new Date(post.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const initial = authorProfile.username ? authorProfile.username[0].toUpperCase() : '?';
 
                 const html = `
                     <div class="post">
                         <div class="post-header">
                             <div class="avatar" style="background-color: ${authorProfile.color}">
-                                ${authorProfile.username[0].toUpperCase()}
+                                ${initial}
                             </div>
                             <div class="user-info">
                                 <div class="user-name">${escapeHtml(authorProfile.username)}</div>
@@ -324,26 +385,21 @@
         }
     };
 
-    // Helper to prevent XSS
+    // Utils
     function escapeHtml(text) {
         if (!text) return text;
-        return text.replace(/&/g, "&amp;")
-                   .replace(/</g, "&lt;")
-                   .replace(/>/g, "&gt;")
-                   .replace(/"/g, "&quot;")
-                   .replace(/'/g, "&#039;");
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    // Helper for UI
     window.toggleProfileEditor = () => {
         const el = document.getElementById('profile-editor');
-        el.style.display = el.style.display === 'none' || el.style.display === '' ? 'block' : 'none';
-        if(el.style.display === 'block') {
+        el.classList.toggle('hidden');
+        if(!el.classList.contains('hidden')) {
             document.getElementById('edit-name').value = currentUser.username;
         }
     };
 
-    // Initialize Auth on Load
+    // Init
     Auth.init();
 
 </script>
